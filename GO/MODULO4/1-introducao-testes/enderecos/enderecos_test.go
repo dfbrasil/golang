@@ -26,3 +26,9 @@ func TestTipoDeEndereco(t *testing.T){
 		}
 	}
 }
+
+// inserir t.Parallel() no início de cada função fará que os testes rodem em paralelo
+// go test --cover verifica o quanto o teste cobre o código
+// go test --coverprofile cobertura.txt salva o resultado do teste em um txt
+// go tool cover --func=resultado.txt vai iterpretar no terminal o resultado do teste.txt criado
+// go tool cover --html=resultado.txt vai iterpretar no terminal o resultado do teste.txt criado e dizer quais linhas estão com problema ou não coberto pelo teste

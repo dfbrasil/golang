@@ -12,3 +12,5 @@ func main(){
 	fmt.Println(tipoEndereco)
 
 }
+
+//rodar o go test -v ele testa todas as funcoes
