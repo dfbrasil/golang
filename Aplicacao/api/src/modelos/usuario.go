@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/badoux/checkmail"
 )
 
 type Usuario struct{
@@ -17,8 +19,8 @@ type Usuario struct{
 
 
 //Preparar vai chamar os métodos para vaidar e formatar o usuario recebido
-func (usuario *Usuario) Preparar() error{
-	if erro := usuario.validar(); erro != nil {
+func (usuario *Usuario) Preparar(etapa string) error{ //quanod chamar o método vai ver se está numa etapa de cadastro ou etapa de edição de usuario
+	if erro := usuario.validar(etapa); erro != nil {
 		return erro
 	}
 
@@ -26,7 +28,7 @@ func (usuario *Usuario) Preparar() error{
 	return nil
 }
 
-func(usuario *Usuario) validar() error{
+func(usuario *Usuario) validar(etapa string) error{
 	if usuario.Nome == ""{
 		return errors.New("o nome é obigatório e não pode estar em branco")
 	}
@@ -39,7 +41,14 @@ func(usuario *Usuario) validar() error{
 		return errors.New("o email é obigatório e não pode estar em branco")
 	}
 
-	if usuario.Senha == ""{
+	//pacote que faz a validação do email
+	if erro := checkmail.ValidateFormat(usuario.Email); erro != nil{
+		return errors.New("o e-mail inserido é inválido")
+	}
+	
+	
+
+	if etapa == "cadastro" && usuario.Senha == ""{
 		return errors.New("a senha é obigatória e não pode estar em branco")
 	}
 	return nil
