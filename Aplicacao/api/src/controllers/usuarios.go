@@ -198,3 +198,48 @@ func DeletarUsuario(w http.ResponseWriter, r *http.Request){
 	respostas.JSON(w, http.StatusNoContent, nil)
 
 }
+
+//SeguirUsuario permite que um usario siga outro
+func SeguirUsuario(w http.ResponseWriter, r *http.Request){
+//primeira coisa a ser feita é extrarir o usuarioId do token. Quem vai seguir é o usuário que está fazendo a requisição e quem vai ser seguido é o usuário que está no parâmetro.
+
+	seguidorID, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil{
+		respostas.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	parametros := mux.Vars(r)
+
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioid"],10,64)
+	if erro != nil{
+		respostas.Erro(w, http.StatusBadRequest, erro)
+	}
+
+	if seguidorID == usuarioID{
+		respostas.Erro(w, http.StatusForbidden, errors.New("não é possível seguir você mesmo"))//o errors.New() sobrecreve a mensagem de erro padrão do http.StatusXXX
+	}
+
+	db, erro := banco.Concetar()
+	if erro != nil{
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+	}
+
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDeUsuarios(db)
+	if erro = repositorio.Seguir(usuarioID, seguidorID); erro != nil{
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	respostas.JSON(w, http.StatusNoContent, nil)
+}
+
+//PararDeSeguirUsuario permite que um usuario deixe de seguir outro
+func PararDeSeguirUsuario(w http.ResponseWriter, r *http.Request){
+
+	
+
+
+}

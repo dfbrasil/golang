@@ -140,7 +140,7 @@ func (repositorio usuarios) Deletar(ID uint64) error{
 
 
 //BuscarporEmail busca por email e retorna o seu id e senha com hash
-func (repositorio usuarios) BuscarPorEmail (email string) (modelos.Usuario, error){
+func (repositorio usuarios) BuscarPorEmail(email string) (modelos.Usuario, error){
 	linha, erro := repositorio.db.Query("select id, senha from usuarios where email = ?", email)
 	if erro != nil{
 		return modelos.Usuario{}, erro
@@ -157,3 +157,23 @@ func (repositorio usuarios) BuscarPorEmail (email string) (modelos.Usuario, erro
 
 	return usuario, nil
 }
+
+//Seguir permite que um usuario siga outro
+func (repositorio usuarios) Seguir(usuarioID, seguidorID uint64) error{
+	statement, erro := repositorio.db.Prepare(
+		"insert ignore into seguidores (usuario_id, seguidor_id) values (?, ?)", //o ignore não isnere dado na tabela caso ele já esteja lá
+	)
+
+	if erro != nil{
+		return erro
+	}
+
+	defer statement.Close()
+
+	if _, erro = statement.Exec(usuarioID, seguidorID); erro != nil{
+		return erro
+	}
+
+	return nil
+}
+
