@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-
 var rotasUsuarios = []Rota{
 	{
 		URI: "/usuarios",
@@ -52,8 +51,28 @@ var rotasUsuarios = []Rota{
 	{
 		URI: "/usuarios/{usuarioid}/parar-de-seguir",
 		Metodo: http.MethodPost,
-		Funcao: controllers.PararDeSeguirUsuario,
+		Funcao: controllers.PararDeSeguir,
 		RequerAutenticacao: true,
 	},
 
+	{
+		URI: "/usuarios/{usuarioid}/seguidores",
+		Metodo: http.MethodGet,
+		Funcao: controllers.BuscarSeguidores,
+		RequerAutenticacao: true,
+	},
+
+	{
+		URI: "/usuarios/{usuarioid}/seguindo",
+		Metodo: http.MethodGet,
+		Funcao: controllers.BuscarSeguindo,
+		RequerAutenticacao: true,
+	},
+
+	{
+		URI:"/usuarios/{usuarioid}/atualizar-senha",
+		Metodo: http.MethodPost,
+		Funcao: controllers.AtualizarSenha,
+		RequerAutenticacao: true,
+	},
 }
