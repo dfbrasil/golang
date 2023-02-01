@@ -21,6 +21,7 @@ type Rota struct{
 func Configurar(r *mux.Router) *mux.Router{ //vai receber um router dewscofigurado e vai retornar a router configurada, usando o HandleFunc
 	rotas := rotasUsuarios
 	rotas = append(rotas, rotaLogin)
+	rotas = append(rotas, rotasPublicacoes...)
 
 	for _, rota := range rotas{
 
