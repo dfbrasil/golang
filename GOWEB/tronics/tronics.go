@@ -5,7 +5,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/ilyakaznacheev/cleanenv"
+
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 var e = echo.New()
@@ -21,7 +23,7 @@ func init(){
 
 func serverMessage(next echo.HandlerFunc) echo.HandlerFunc{ //serverMessage tem a mesma assinatura de um middleware function padrão: aceita um handlerfunction como argumento e retorna um handlefunction. É um tipo que tem ma function que aceita uma handlerfunc e reuotna uma handlerfunc
 	return func(c echo.Context) error { //serverMessage retorna uma function que contem uma mesma assinatura de um handler function. Também é um tipo que é uma função que recebe um contexto e retorna um error
-		fmt.Println("inside serverheader middleware")
+		fmt.Println("inside custon middleware")
 		return next(c)
 	}
 }
@@ -32,12 +34,12 @@ func Start(){
 	if err != nil {
 		e.Logger.Fatal("Unable to laod configuration")
 	}
-	e.Use(serverMessage)
+	e.Pre(middleware.RemoveTrailingSlash())
 	e.GET("/products", getProducts)
 	e.GET("/products/:id", getProduct)
 	e.DELETE("/products/:id", deleteProduct)
 	e.PUT("/products/:id", updateProduct)
-	e.POST("/products", createProduct)
+	e.POST("/products", createProduct, middleware.BodyLimit("1K")) //1k = 1 kilobyte
 
 	e.StdLogger.Printf(fmt.Sprintf("Rodando echo na porta %s", cfg.Port))
 	e.Logger.Fatal(e.Start((fmt.Sprintf("localhost:%s", cfg.Port))))
