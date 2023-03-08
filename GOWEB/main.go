@@ -25,6 +25,10 @@ func main(){
 		return c.String(http.StatusOK, "Hello there")
 	})
 
+	e.GET("/products", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, products)
+	})
+
 	e.GET("/products/:id", func(c echo.Context) error {
 
 		var product map[int]string
