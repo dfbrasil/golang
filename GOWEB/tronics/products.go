@@ -1,6 +1,7 @@
 package tronics
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -21,6 +22,7 @@ func (p *ProductValidator)  Validate(i interface{}) error {
 var products = []map[int]string{{1:"mobiles"},{2:"tv"},{3:"laptops"}}
 
 func getProducts(c echo.Context) error {
+	fmt.Println("Inside get products")
 	return c.JSON(http.StatusOK, products)
 }
 
