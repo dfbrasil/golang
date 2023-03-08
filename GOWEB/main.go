@@ -52,6 +52,23 @@ func main(){
 
 	})
 
+	e.POST("/products", func(c echo.Context) error {
+		type body struct{
+			Name string `json:"product_name"`
+		}
+		var reqBody body
+		if err := c.Bind(&reqBody); err != nil {
+			return err
+		}
+
+		product := map[int]string{
+			len(products) + 1: reqBody.Name, //cria um novo produto usando o product_name da request e ID do Map
+		}
+		products = append(products, product)
+		return c.JSON(http.StatusOK, product)
+	})
+
+
 	e.StdLogger.Printf(fmt.Sprintf("Rodando echo na porta %s", port))
 	e.Logger.Fatal(e.Start((fmt.Sprintf("localhost:%s", port))))
 
