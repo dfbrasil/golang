@@ -62,6 +62,16 @@ func main(){
 	db := client.Database("tronics")
 	collection := db.Collection("products")
 	res, err := collection.InsertOne(context.Background(), trimmer)
+	// res, err := collection.InsertOne(context.Background(), bson.M{
+	// 	"name":"daniel",
+	// 	"sobrenome":"brasil",
+	// 	"hobbies":bson.A{
+	// 		"videogames",
+	// 		"tv",
+	// 		"futebol",
+	// 	},
+	// })
+
 
 	if err != nil{
 		fmt.Println(err)
