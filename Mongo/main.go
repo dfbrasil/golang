@@ -180,9 +180,35 @@ func main(){
 		fmt.Println(findArray.Name)
 	}
 
+	//Update operator for Field
+	fmt.Println("---- Update operator for field ----")
+	updateFieldCon := bson.M{"$set": bson.M{"isEssential": "false"}}
+	updateFieldRes, err := collection.UpdateMany(context.Background(), bson.M{}, updateFieldCon)
+	fmt.Println(updateFieldRes.ModifiedCount)
+
+	//Update operator for Array
+	fmt.Println("---- Update operator for array ----")
+	updateArrayCon := bson.M{"$addToSet": bson.M{"accessories": "manual"}}
+	updateArrayRes, err := collection.UpdateMany(context.Background(), arrayFilter, updateArrayCon)
+	fmt.Println(updateArrayRes.ModifiedCount)
+
+	//Update operator for Field - MultipleOperators
+	fmt.Println("---- Update operator for field multiple operators ----")
+	incCon := bson.M{
+		"$mul":bson.M{ //multiplier
+			"price":1.20,//aumentar o preço em 20%
+		},
+	}
+	incRes, err := collection.UpdateMany(context.Background(), bson.M{}, incCon)
+	fmt.Println(incRes.MatchedCount)
+
+	//Delete operation
+	fmt.Println("---- delete operator ----")
+	delRes, err := collection.DeleteMany(context.Background(), arrayFilter)//arrayfilter está declarado mais acima, e neste caso irá deletar todos os componentes que tem "charger"
+	fmt.Println(delRes.DeletedCount)
+
 	if err != nil{
 		fmt.Println(err)
 	}
 	fmt.Println(res.InsertedID.(primitive.ObjectID).Timestamp())
 }
-
