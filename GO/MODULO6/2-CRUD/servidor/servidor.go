@@ -1,7 +1,7 @@
 package servidor
 
 import (
-	"crud/banco"
+	"crud/banco1"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
