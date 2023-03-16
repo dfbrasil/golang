@@ -36,7 +36,8 @@ func init()  {
 
 func main()  {
 	e := echo.New()
-	e.POST("/products", handlers.CreateProducts)
+	h := &handlers.ProductHandler{Col: col}
+	e.POST("/products", h.CreateProducts)
 	e.Logger.Infof("Server is running on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }
