@@ -9,6 +9,7 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -36,8 +37,9 @@ func init()  {
 
 func main()  {
 	e := echo.New()
+	e.Pre(middleware.RemoveTrailingSlash())
 	h := &handlers.ProductHandler{Col: col}
-	e.POST("/products", h.CreateProducts)
+	e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"))
 	e.Logger.Infof("Server is running on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }
