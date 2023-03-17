@@ -3,13 +3,15 @@ package handlers
 import (
 	"TronicsCorp/dbiface"
 	"context"
-	"log"
+	
 
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/labstack/gommon/log"
 )
 
 var (
@@ -43,13 +45,36 @@ func (p *ProductValidator) Validate(i interface{}) error  {
 	return p.validator.Struct(i)
 }
 
+func findProducts(ctx context.Context, collection dbiface.CollectionAPI) ([]Product, error)  {
+	var products []Product
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Errorf("Unable to find products: %v", err)
+	}
+	err = cursor.All(ctx, &products)
+	if err != nil {
+		log.Errorf("Unable to decode products: %v", err)
+	}
+	return products, nil
+}
+
+// GerProduct returns a list of products
+func (h ProductHandler) GetProducts(c echo.Context) error  {
+	products, err := findProducts(context.Background(), h.Col)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, products)
+}
+
 func insertProducts(ctx context.Context, products []Product, collection dbiface.CollectionAPI) ([]interface{}, error)  {
 	var insertedIds []interface{}
 	for _, product := range products {
 		product.ID = primitive.NewObjectID()
 		insertID, err := collection.InsertOne(ctx, product)
 		if err != nil {
-			log.Printf("Unable to insert product: %v", err)
+			log.Errorf("Unable to insert product: %v", err)
 			return nil, err
 		}
 		insertedIds = append(insertedIds, insertID.InsertedID)
@@ -62,12 +87,12 @@ func (h *ProductHandler) CreateProducts(c echo.Context) error  {
 	var products []Product
 	c.Echo().Validator = &ProductValidator{validator: v}
 	if err := c.Bind(&products); err != nil {
-		log.Printf("Can not bind the request body to the product struct: %v", err)
+		log.Errorf("Can not bind the request body to the product struct: %v", err)
 		return err
 	}
 	for _, product := range products {
 		if err := c.Validate(product); err != nil {
-			log.Printf("Can not validate the product: %+v %v" , product, err)
+			log.Errorf("Can not validate the product: %+v %v" , product, err)
 			return err
 		}
 	}

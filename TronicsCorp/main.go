@@ -5,15 +5,21 @@ import (
 	"TronicsCorp/handlers"
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/random"
+	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// CorrelationID is the name of the header that contains the correlation id
+const(
+	CorrelationID = "X-Correlation-ID"
+)
 
 var (
 	c *mongo.Client
@@ -33,13 +39,36 @@ func init()  {
 	}
 	db := c.Database(cfg.DBName)
 	col = db.Collection(cfg.CollectionName)
+	
+}
+
+func addCorrelationID(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+
+		// generate a new correlation id if not present
+		id := c.Request().Header.Get(CorrelationID)
+		var newID string
+		if id == "" {
+			// generate reandom number
+			newID = random.String(12)
+			
+		}else {
+			newID = id
+		}
+		c.Request().Header.Set(CorrelationID, newID)
+		c.Response().Header().Set(CorrelationID, newID)
+		return next(c)
+	}
 }
 
 func main()  {
 	e := echo.New()
+	e.Logger.SetLevel(log.ERROR)
 	e.Pre(middleware.RemoveTrailingSlash())
+	e.Pre(addCorrelationID)//Custon middleware
 	h := &handlers.ProductHandler{Col: col}
 	e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"))
+	e.GET("/products", h.GetProducts)
 	e.Logger.Infof("Server is running on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }
