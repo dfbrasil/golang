@@ -19,7 +19,7 @@ var (
 // Product describes an eletronic product e.g. phone
 type Product struct{
 	ID primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	Name string `json:"product_name" bson:"product_name" validate:"required,max=20"`
+	Name string `json:"product_name" bson:"product_name" validate:"required,max=40"`
 	Price int `json:"price" bson:"price" validate:"required,max=2000"`
 	Currency string `json:"currency" bson:"currency" validate:"required,len=3"`
 	Quantity int `json:"quantity" bson:"quantity"`

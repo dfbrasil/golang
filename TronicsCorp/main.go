@@ -43,7 +43,3 @@ func main()  {
 	e.Logger.Infof("Server is running on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }
-
-	// e.GET("/", func(c echo.Context) error {
-	// 	return c.String(200, "Hello, World!")
-	// })
