@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -57,5 +58,17 @@ func TestProduct(t *testing.T) {
 		h.Col = col
 		err := h.CreateProducts(c)
 		assert.Nil(t, err )
+		assert.Equal(t, http.StatusCreated, res.Code)
+	})
+	t.Run("get products", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/products", nil)
+		res := httptest.NewRecorder()
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		c := e.NewContext(req, res)
+		h.Col = col
+		err := h.GetProducts(c)
+		assert.Nil(t, err )
+		assert.Equal(t, http.StatusOK, res.Code)
 	})
 }

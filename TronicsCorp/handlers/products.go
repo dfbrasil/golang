@@ -3,15 +3,17 @@ package handlers
 import (
 	"TronicsCorp/dbiface"
 	"context"
-	
+	"encoding/json"
+	"io"
 
 	"net/http"
+	"net/url"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"github.com/labstack/gommon/log"
 )
 
 var (
@@ -45,22 +47,35 @@ func (p *ProductValidator) Validate(i interface{}) error  {
 	return p.validator.Struct(i)
 }
 
-func findProducts(ctx context.Context, collection dbiface.CollectionAPI) ([]Product, error)  {
+func findProducts(ctx context.Context,q url.Values, collection dbiface.CollectionAPI) ([]Product, error)  {
 	var products []Product
-	cursor, err := collection.Find(ctx, bson.M{})
+	filter := make(map[string]interface{})
+	for key, value := range q {
+		filter[key] = value[0]
+	}
+	if filter["_id"] != nil {
+		docID, err := primitive.ObjectIDFromHex(filter["_id"].(string))
+		if err != nil {
+			return products, err
+		}
+		filter["_id"] = docID
+	}
+	cursor, err := collection.Find(ctx, bson.M(filter))
 	if err != nil {
 		log.Errorf("Unable to find products: %v", err)
+		return products, err
 	}
 	err = cursor.All(ctx, &products)
 	if err != nil {
 		log.Errorf("Unable to decode products: %v", err)
+		return products, err
 	}
 	return products, nil
 }
 
 // GerProduct returns a list of products
-func (h ProductHandler) GetProducts(c echo.Context) error  {
-	products, err := findProducts(context.Background(), h.Col)
+func (h *ProductHandler) GetProducts(c echo.Context) error  {
+	products, err := findProducts(context.Background(),c.QueryParams(),  h.Col)
 	if err != nil {
 		return err
 	}
@@ -103,4 +118,51 @@ func (h *ProductHandler) CreateProducts(c echo.Context) error  {
 	log.Printf("Inserted products with IDs: %v", IDs)
 	return c.JSON(http.StatusCreated, IDs)
 }
-	
+
+// modifyProduct modifies a product
+func modifyProduct(ctx context.Context, id string, reqBody io.ReadCloser, collection dbiface.CollectionAPI) (Product, error) {
+	var product Product
+
+	//find if the product exists, if err return 404
+	docId, err := primitive.ObjectIDFromHex(id)
+	log.Errorf("Unable to find product: %v", err)
+	if err != nil {
+		return product, err
+	}
+	filter := bson.M{"_id": docId}
+	res := collection.FindOne(ctx, filter)
+	if err := res.Decode(&product); err != nil {
+		log.Errorf("Unable to decode product: %v", err)
+		return product, echo.NewHTTPError(http.StatusNotFound, "Product not found")
+	}
+
+	//decode the request body to product struct, if err return 500
+	if err := json.NewDecoder(reqBody).Decode(&product); err != nil {
+		log.Errorf("Unable to decode the request body to product struct: %v", err)
+		return product, echo.NewHTTPError(http.StatusInternalServerError, "Unable to decode the request body to product struct")
+	}
+
+	//validate the request body, if err return 400
+	if err := v.Struct(product); err != nil {
+		log.Errorf("Unable to validate the product: %v", err)
+		return product, echo.NewHTTPError(http.StatusBadRequest, "Unable to validate the product")
+	}
+
+	//update the product, if err return 500
+	_,err = collection.UpdateOne(ctx, filter, bson.M{"$set": product})
+	if err != nil {
+		log.Errorf("Unable to update product: %v", err)
+		return product, echo.NewHTTPError(http.StatusInternalServerError, "Unable to update product")
+	}
+	return product, nil
+}
+
+// UpdateProduct updates a product
+func (h *ProductHandler) UpdateProduct(c echo.Context) error{
+	product, err := modifyProduct(context.Background(), c.Param("id"), c.Request().Body, h.Col)
+	if err != nil {
+		log.Errorf("Unable to update product: %v", err)
+		return err
+	}
+	return c.JSON(http.StatusOK, product)
+}
