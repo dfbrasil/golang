@@ -38,7 +38,7 @@ func init()  {
 		log.Fatalf("Can not connect to MongoDB: %v", err)
 	}
 	db := c.Database(cfg.DBName)
-	col = db.Collection(cfg.CollectionName)
+	col = db.Collection(cfg.ProductCollection)
 }
 
 func TestMain(m *testing.M) {
