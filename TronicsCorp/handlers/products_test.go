@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,7 +21,7 @@ import (
 
 
 var (
-	c *mongo.Client
+	// c *mongo.Client
 	db *mongo.Database
 	col *mongo.Collection
 	cfg config.Properties
@@ -39,6 +40,17 @@ func init()  {
 	db := c.Database(cfg.DBName)
 	col = db.Collection(cfg.CollectionName)
 }
+
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	testCode := m.Run()
+	// Drop the test database
+	col.Drop(ctx)
+	// Close the connection
+	db.Drop(ctx)
+	os.Exit(testCode)
+}
+
 func TestProduct(t *testing.T) {
 	var docID string
 	t.Run("TestProduct", func(t *testing.T) {
@@ -117,7 +129,7 @@ func TestProduct(t *testing.T) {
 		e := echo.New()
 		c := e.NewContext(req, res)
 		c.SetParamNames("id")
-		c.SetParamValues(fmt.Sprintf("%s",docID))
+		// c.SetParamValues(fmt.Sprintf("%s",docID))
 		h.Col = col
 		err := h.GetProduct(c)
 		assert.Nil(t, err )
@@ -146,7 +158,7 @@ func TestProduct(t *testing.T) {
 		e := echo.New()
 		c := e.NewContext(req, res)
 		c.SetParamNames("id")
-		c.SetParamValues(fmt.Sprintf("%s",docID))
+		// c.SetParamValues(fmt.Sprintf("%s",docID))
 		h.Col = col
 		err := h.UpdateProduct(c)
 		assert.Nil(t, err )
@@ -165,7 +177,7 @@ func TestProduct(t *testing.T) {
 		e := echo.New()
 		c := e.NewContext(req, res)
 		c.SetParamNames("id")
-		c.SetParamValues(fmt.Sprintf("%s",docID))
+		// c.SetParamValues(fmt.Sprintf("%s",docID))
 		h.Col = col
 		err := h.DeleteProduct(c)
 		assert.Nil(t, err )
