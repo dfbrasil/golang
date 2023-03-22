@@ -167,7 +167,7 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error{
 	return c.JSON(http.StatusOK, product)
 }
 
-// findProduct 
+// findProduct finds a product
 func findProduct(ctx context.Context, id string, collection dbiface.CollectionAPI) (Product, error){
 	var product Product
 	docID, err := primitive.ObjectIDFromHex(id)
@@ -182,7 +182,7 @@ func findProduct(ctx context.Context, id string, collection dbiface.CollectionAP
 	return product, nil
 }
 
-// GetProduct ...
+// GetProduct returns a product
 func (h *ProductHandler) GetProduct(c echo.Context) error {
 	product, err := findProduct(context.Background(), c.Param("id"), h.Col)
 	if err != nil{
@@ -191,7 +191,7 @@ func (h *ProductHandler) GetProduct(c echo.Context) error {
 	return c.JSON(http.StatusOK, product)
 }
 
-// deleteProduct
+// deleteProduct deletes a product
 func deleteProduct(ctx context.Context, id string, collection dbiface.CollectionAPI) (int64,error){
 	docID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -203,8 +203,8 @@ func deleteProduct(ctx context.Context, id string, collection dbiface.Collection
 		return 0, nil
 	}
 	return res.DeletedCount, nil
-}
-
+	
+}// DeleteProduct deletes a product
 func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 	delCount, err := deleteProduct(context.Background(), c.Param("id"), h.Col)
 	if err != nil{
