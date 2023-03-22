@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"TronicsCorp/config"
+	// "TronicsCorp/config"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,7 +24,7 @@ var (
 	// c *mongo.Client
 	db *mongo.Database
 	col *mongo.Collection
-	cfg config.Properties
+	// cfg config.Properties
 	h ProductHandler
 )
 

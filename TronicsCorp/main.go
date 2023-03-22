@@ -91,6 +91,7 @@ func main()  {
 	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"))
 
 	e.POST("/users", uh.CreateUser)
+	e.POST("/auth", uh.AuthnUser)
 	e.Logger.Infof("Server is running on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }

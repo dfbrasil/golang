@@ -10,4 +10,5 @@ type Properties struct {
 	// CollectionName string `env:"COLLECTION_NAME" env-default:"products"`
 	ProductCollection string `env:"PRODUCTS_COL_NAME" env-default:"products"`
 	UsersCollection string `env:"USERS_COL_NAME" env-default:"users"`
+	JwrTokenSecret string `env:"JWT_TOKEN_SECRET" env-default:"senhasecreta"`
 }
