@@ -62,9 +62,12 @@ func addCorrelationID(next echo.HandlerFunc) echo.HandlerFunc {
 
 func main()  {
 	e := echo.New()
-	e.Logger.SetLevel(log.ERROR)
+	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(addCorrelationID)//Custon middleware
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: `${time_rfc3339_nano} ${remote_ip} ${host} ${method} ${uri} ${method} ${user_agent}` + ` ${status} ${error} ${latency_human}` + "\n",
+	}))
 	h := &handlers.ProductHandler{Col: col}
 	e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"))
 	e.GET("/products", h.GetProducts)

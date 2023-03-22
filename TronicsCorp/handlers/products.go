@@ -83,14 +83,14 @@ func (h *ProductHandler) GetProducts(c echo.Context) error  {
 	return c.JSON(http.StatusOK, products)
 }
 
-func insertProducts(ctx context.Context, products []Product, collection dbiface.CollectionAPI) ([]interface{}, error)  {
+func insertProducts(ctx context.Context, products []Product, collection dbiface.CollectionAPI) ([]interface{}, *echo.HTTPError)  {
 	var insertedIds []interface{}
 	for _, product := range products {
 		product.ID = primitive.NewObjectID()
 		insertID, err := collection.InsertOne(ctx, product)
 		if err != nil {
 			log.Errorf("Unable to insert product: %v", err)
-			return nil, err
+			return nil, echo.NewHTTPError(http.StatusInternalServerError, "Unable to insert product")
 		}
 		insertedIds = append(insertedIds, insertID.InsertedID)
 	}
@@ -103,12 +103,12 @@ func (h *ProductHandler) CreateProducts(c echo.Context) error  {
 	c.Echo().Validator = &ProductValidator{validator: v}
 	if err := c.Bind(&products); err != nil {
 		log.Errorf("Can not bind the request body to the product struct: %v", err)
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "Can not bind the request body to the product struct")
 	}
 	for _, product := range products {
 		if err := c.Validate(product); err != nil {
 			log.Errorf("Can not validate the product: %+v %v" , product, err)
-			return err
+			return echo.NewHTTPError(http.StatusBadRequest, "Can not validate the product")
 		}
 	}
 	IDs, err := insertProducts(context.Background(), products, h.Col)
@@ -125,9 +125,9 @@ func modifyProduct(ctx context.Context, id string, reqBody io.ReadCloser, collec
 
 	//find if the product exists, if err return 404
 	docId, err := primitive.ObjectIDFromHex(id)
-	log.Errorf("Unable to find product: %v", err)
+	log.Errorf("cannot convert to ObjetctID %v", err)
 	if err != nil {
-		return product, err
+		return product, echo.NewHTTPError(http.StatusInternalServerError, "Unable to convert to ObjectID")
 	}
 	filter := bson.M{"_id": docId}
 	res := collection.FindOne(ctx, filter)
