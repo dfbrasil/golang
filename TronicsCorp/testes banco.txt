@@ -1,0 +1,15 @@
+[{
+  "product_name":"googletalk",
+  "price":250,
+  "currency":"INR",
+  "vendor":"google",
+  "accessories":["charger"]
+}]
+
+{
+  "username":"dfb@gmail.com",
+  "password":"dfb123456"
+}
+
+Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjpmYWxzZSwiZXhwIjoxNjc5NjAxODEzLCJ1c2VyX2lkIjoiZGZiQGdtYWlsLmNvbSJ9.KUm2cZBMX2VwjI0eqFaiVf3vPhTmnAulledl5OskbEM
+

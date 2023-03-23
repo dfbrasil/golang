@@ -14,7 +14,6 @@ type (
 		Find(ctx context.Context, filter interface{},opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
 		FindOne(ctx context.Context, filter interface{},ts ...*options.FindOneOptions) *mongo.SingleResult
 		UpdateOne(ctx context.Context, filter interface{}, update interface{},opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
-		// DeleteMany(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 		DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 	}
 )

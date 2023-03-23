@@ -1,15 +1,14 @@
 package handlers
 
 import (
-	"TronicsCorp/config"
-	"TronicsCorp/dbiface"
 	"context"
 	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/go-playground/validator/v10"
 	"github.com/ilyakaznacheev/cleanenv"
+	"TronicsCorp/config"
+	"TronicsCorp/dbiface"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,87 +16,129 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// User describes a user
-type User struct{
-	Email string `json:"username" bson:"username" validate:"required,email"`
+//User represents a user
+type User struct {
+	Email    string `json:"username" bson:"username" validate:"required,email"`
 	Password string `json:"password,omitempty" bson:"password" validate:"required,min=8,max=300"`
+	IsAdmin  bool   `json:"isadmin,omitempty" bson:"isadmin"`
 }
 
-// UserHandler is a struct that contains the collection
-type UsersHandler struct{
+//UsersHandler users handler
+type UsersHandler struct {
 	Col dbiface.CollectionAPI
 }
 
-// UserValidator is a struct that contains the validator
-type userValidator struct {
-	validator *validator.Validate
-}
-
-// Validate validates the user
-func (u *userValidator) Validate(i interface{}) error  {
-	return u.validator.Struct(i)
+type errorMessage struct {
+	Message string `json:"message"`
 }
 
 var (
-	cfg config.Properties
+	prop config.Properties
 )
 
-// insertUser inserts a user into the database
-func insertUser(ctx context.Context, user User, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError){
+func isCredValid(givenPwd, storedPwd string) bool {
+	if err := bcrypt.CompareHashAndPassword([]byte(storedPwd), []byte(givenPwd)); err != nil {
+		return false
+	}
+	return true
+}
+
+func (u User) createToken() (string, error) {
+	if err := cleanenv.ReadEnv(&prop); err != nil {
+		log.Errorf("Configuration cannot be read : %v", err)
+	}
+	claims := jwt.MapClaims{}
+	claims["authorized"] = u.IsAdmin
+	claims["user_id"] = u.Email
+	claims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err := at.SignedString([]byte(prop.JwtTokenSecret))
+	if err != nil {
+		log.Errorf("Unable to generate the token :%v", err)
+		return "", err
+	}
+	return token, nil
+}
+
+func insertUser(ctx context.Context, user User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
 	var newUser User
 	res := collection.FindOne(ctx, bson.M{"username": user.Email})
 	err := res.Decode(&newUser)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Errorf("Unable to decode retrieved user: %v", err)
-		return nil, echo.NewHTTPError(500, "Unable to decode retrieved user.")
+		return newUser,
+			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "Unable to decode retrieved user"})
 	}
 	if newUser.Email != "" {
-		log.Errorf("User by %s already exists",user.Email)
-		return nil, echo.NewHTTPError(400, "User already exists.")
+		log.Errorf("User by %s already exists", user.Email)
+		return newUser,
+			echo.NewHTTPError(http.StatusBadRequest, errorMessage{Message: "User already exists"})
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 	if err != nil {
-		log.Errorf("Unable to hash password: %v", err)
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, "Unable to hash password.")
+		log.Errorf("Unable to hash the password: %v", err)
+		return newUser,
+			echo.NewHTTPError(http.StatusInternalServerError, errorMessage{Message: "Unable to process the password"})
 	}
 	user.Password = string(hashedPassword)
 	_, err = collection.InsertOne(ctx, user)
 	if err != nil {
-		log.Errorf("Unable to insert user: %v", err)
-		return nil, echo.NewHTTPError(500, "Unable to insert user.")
+		log.Errorf("Unable to insert the user :%+v", err)
+		return newUser,
+			echo.NewHTTPError(http.StatusInternalServerError, errorMessage{Message: "Unable to create the user"})
 	}
-	// insertRes, err := collection.InsertOne(ctx, user)
-	// if err != nil {
-	// 	log.Errorf("Unable to insert user: %v", err)
-	// 	return nil, echo.NewHTTPError(500, "Unable to insert user.")
-	// }
 	return User{Email: user.Email}, nil
 }
 
-// CreateUser creates a user
+//CreateUser creates a user
 func (h *UsersHandler) CreateUser(c echo.Context) error {
 	var user User
 	c.Echo().Validator = &userValidator{validator: v}
 	if err := c.Bind(&user); err != nil {
 		log.Errorf("Unable to bind to user struct.")
-		return echo.NewHTTPError(400, "Unable to parse the request payload.")
+		return c.JSON(http.StatusUnprocessableEntity,
+			errorMessage{Message: "Unable to parse the request payload."})
 	}
 	if err := c.Validate(user); err != nil {
-		log.Errorf("Unable to validate the reqeust body.")
-		return echo.NewHTTPError(400, "Unable to validate the request payload.")
+		log.Errorf("Unable to validate the requested body.")
+		return c.JSON(http.StatusBadRequest,
+			errorMessage{Message: "Unable to validate request body"})
 	}
-	insertedUserID, err := insertUser(context.Background(), user, h.Col)
+	resUser, httpError := insertUser(context.Background(), user, h.Col)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+	token, err := user.createToken()
 	if err != nil {
-		log.Errorf("unable to insert to database")
-		return err
-	}
-	token, er := createToken(user.Email)
-	if er != nil {
 		log.Errorf("Unable to generate the token.")
-		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to generate the token.")
+		return echo.NewHTTPError(http.StatusInternalServerError,
+			errorMessage{Message: "Unable to generate the token"})
 	}
-	c.Response().Header().Set("x-auth-token", token)
-	return c.JSON(http.StatusCreated, insertedUserID)
+	c.Response().Header().Set("x-auth-token", "Bearer "+token)
+	return c.JSON(http.StatusCreated, resUser)
+}
+
+func authenticateUser(ctx context.Context, reqUser User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
+	var storedUser User //user in db
+	// check whether the user exists or not
+	res := collection.FindOne(ctx, bson.M{"username": reqUser.Email})
+	err := res.Decode(&storedUser)
+	if err != nil && err != mongo.ErrNoDocuments {
+		log.Errorf("Unable to decode retrieved user: %v", err)
+		return storedUser,
+			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "Unable to decode retrieved user"})
+	}
+	if err == mongo.ErrNoDocuments {
+		log.Errorf("User %s does not exist.", reqUser.Email)
+		return storedUser,
+			echo.NewHTTPError(http.StatusNotFound, errorMessage{Message: "User does not exist"})
+	}
+	//validate the password
+	if !isCredValid(reqUser.Password, storedUser.Password) {
+		return storedUser,
+			echo.NewHTTPError(http.StatusUnauthorized, errorMessage{Message: "Credentials invalid"})
+	}
+	return User{Email: storedUser.Email}, nil
 }
 
 // AuthnUser authenticates a user
@@ -106,69 +147,24 @@ func (h *UsersHandler) AuthnUser(c echo.Context) error {
 	c.Echo().Validator = &userValidator{validator: v}
 	if err := c.Bind(&user); err != nil {
 		log.Errorf("Unable to bind to user struct.")
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, "Unable to parse the request payload.")
+		return c.JSON(http.StatusUnprocessableEntity,
+			errorMessage{Message: "Unable to parse the request payload."})
 	}
 	if err := c.Validate(user); err != nil {
-		log.Errorf("Unable to validate the reqeust body.")
-		return echo.NewHTTPError(http.StatusBadRequest, "Unable to validate the request payload.")
+		log.Errorf("Unable to validate the requested body.")
+		return c.JSON(http.StatusBadRequest,
+			errorMessage{Message: "Unable to validate request payload"})
 	}
-	user, err := authenticateUser(context.Background(), user, h.Col)
+	user, httpError := authenticateUser(context.Background(), user, h.Col)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+	token, err := user.createToken()
 	if err != nil {
-		log.Errorf("unable to authenticate user")
-		return err
-	}
-	token, er := createToken(user.Email)
-	if er != nil {
-		log.Errorf("unable to create token")
-		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to create token.")
+		log.Errorf("Unable to generate the token.")
+		return c.JSON(http.StatusInternalServerError,
+			errorMessage{Message: "Unable to generate the token"})
 	}
 	c.Response().Header().Set("x-auth-token", "Bearer "+token)
 	return c.JSON(http.StatusOK, User{Email: user.Email})
-}
-
-// authenticateUser authenticates a user
-func authenticateUser(ctx context.Context, reqUser User, collection dbiface.CollectionAPI) (User, *echo.HTTPError)  {
-	var storedUser User //Useri n DB
-	res := collection.FindOne(ctx, bson.M{"username": reqUser.Email})
-	err := res.Decode(&storedUser)
-	if err != nil && err != mongo.ErrNoDocuments {
-		log.Errorf("Unable to decode retrieved user: %v", err)
-		return storedUser, echo.NewHTTPError(http.StatusUnprocessableEntity, "Unable to decode retrieved user.")
-	}
-	if err == mongo.ErrNoDocuments {
-		log.Errorf("User by %s does not exist", reqUser.Email)
-		return storedUser, echo.NewHTTPError(http.StatusNotFound, "User does not exist.")
-	}
-
-	// validate the password
-	if !isCredValid(reqUser.Password, storedUser.Password) {
-		log.Errorf("Incorrect password")
-		return storedUser, echo.NewHTTPError(http.StatusUnauthorized, "Incorrect password.")
-	}
-	return User{Email: storedUser.Email}, nil
-}
-
-func isCredValid(givenPwr, storedPwd string) bool {
-	if err := bcrypt.CompareHashAndPassword([]byte(storedPwd), []byte(givenPwr)); err != nil{
-		return false
-	}
-	return true
-}
-
-func createToken(username string) (string, error) {
-	if err := cleanenv.ReadEnv(&cfg); err != nil {
-		log.Fatalf("Unable to read environment variables: %v", err)
-		return "", err
-	}
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = username
-	claims["exp"] = time.Now().Add(time.Minute * 15).Unix()
-	at := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := at.SignedString([]byte(cfg.JwrTokenSecret))
-	if err != nil {
-		log.Errorf("Unable to sign token: %v", err)
-		return "", err
-	}
-	return token, nil
 }
