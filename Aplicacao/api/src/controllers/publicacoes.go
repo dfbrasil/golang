@@ -234,3 +234,26 @@ func BuscarPublicacoesPorUsuario(w http.ResponseWriter, r *http.Request){
 	}
 	respostas.JSON(w, http.StatusOK, publicacoes)
 }
+
+func CurtirPublicacao(w http.ResponseWriter, r *http.Request){
+	parametro := mux.Vars(r)
+	publicacaoID, err := strconv.ParseUint(parametro["publicacaoId"], 10, 64)
+	if err != nil {
+		respostas.Erro(w, http.StatusBadRequest, err)
+		return
+	}
+
+	db, err := banco.Concetar()
+	if err != nil{
+		respostas.Erro(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDePublicacoes(db)
+	if err = repositorio.Curtir(publicacaoID); err != nil {
+		respostas.Erro(w, http.StatusInternalServerError, err)
+		return
+	}
+	respostas.JSON(w, http.StatusNoContent, nil)
+}
