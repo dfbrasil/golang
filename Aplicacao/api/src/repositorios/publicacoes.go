@@ -37,7 +37,6 @@ func (repositorio Publicacoes) Criar(publicacao modelos.Publicacao) (uint64, err
 	return uint64(ultimoIDInserido), nil
 }
 
-
 // BuscarPorID traz uma publicacao do banco de dados
 func (repositorio Publicacoes) BuscarPorID(publicacaoID uint64) (modelos.Publicacao, error){
 	linha, erro := repositorio.db.Query(`select p.*, u.nick from publicacoes p inner join usuarios u on p.autor_id = u.id where p.id = ?`, publicacaoID)
@@ -134,6 +133,7 @@ func (repositorio Publicacoes) Deletar(publicacaoID uint64) error {
 	return nil
 }
 
+// BuscarPorUsuario traz as publicacoes de um usuario
 func (repositorio Publicacoes) BuscarPorUsuario(usuarioID uint64) ([]modelos.Publicacao, error){
 	linhas, err := repositorio.db.Query(`
 	select p.*, u.nick from publicacoes p
@@ -168,6 +168,7 @@ func (repositorio Publicacoes) BuscarPorUsuario(usuarioID uint64) ([]modelos.Pub
 	return publicacoes, nil
 }
 
+// BuscarPorUsuario traz as publicacoes de um usuario
 func (repositorio Publicacoes) Curtir(publicacaoID uint64) error {
 	statement, erro := repositorio.db.Prepare(`
 	update publicacoes set curtidas = curtidas + 1 where id = ?
@@ -185,6 +186,7 @@ func (repositorio Publicacoes) Curtir(publicacaoID uint64) error {
 	return nil
 }
 
+// BuscarPorUsuario traz as publicacoes de um usuario
 func (repositorio Publicacoes) Descurtir(publicacaoID uint64) error {
 	statement, erro := repositorio.db.Prepare(`
 		update publicacoes set curtidas = 

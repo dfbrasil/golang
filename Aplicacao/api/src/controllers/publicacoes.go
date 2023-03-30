@@ -235,6 +235,7 @@ func BuscarPublicacoesPorUsuario(w http.ResponseWriter, r *http.Request){
 	respostas.JSON(w, http.StatusOK, publicacoes)
 }
 
+// CurtirPublicacao adiciona um like em uma publicacao
 func CurtirPublicacao(w http.ResponseWriter, r *http.Request){
 	parametro := mux.Vars(r)
 	publicacaoID, err := strconv.ParseUint(parametro["publicacaoId"], 10, 64)
@@ -258,6 +259,8 @@ func CurtirPublicacao(w http.ResponseWriter, r *http.Request){
 	respostas.JSON(w, http.StatusNoContent, nil)
 }
 
+
+// DescurtirPublicacao remove um like de uma publicacao
 func DescurtirPublicacao(w http.ResponseWriter, r *http.Request){
 	parametro := mux.Vars(r)
 	publicacaoID, err := strconv.ParseUint(parametro["publicacaoId"], 10, 64)
