@@ -7,6 +7,7 @@ import (
 	"api/src/repositorios"
 	"api/src/respostas"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -112,8 +113,60 @@ func BuscarPublicacao(w http.ResponseWriter, r *http.Request){
 
 //AtualizarPublicacao altera os dados de uma publicacao
 func AtualizarPublicacao(w http.ResponseWriter, r *http.Request){
+	usuarioID, err := autenticacao.ExtrairUsuarioID(r)
+	if err != nil {
+		respostas.Erro(w, http.StatusUnauthorized, err)
+		return
+	}
 
+	parametros := mux.Vars(r)
+	publicacaoID, err := strconv.ParseUint(parametros["publicacaoId"], 10, 64)
+	if err != nil {
+		respostas.Erro(w, http.StatusBadRequest, err)
+		return
+	}
 
+	db, err := banco.Concetar()
+	if err != nil{
+		respostas.Erro(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDePublicacoes(db)
+	publicacaoSalvaNoBanco, err := repositorio.BuscarPorID(publicacaoID)
+	if err != nil {
+		respostas.Erro(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if publicacaoSalvaNoBanco.AutorID != usuarioID {
+		respostas.Erro(w, http.StatusForbidden, errors.New("você não pode alterar uma publicação que não seja sua"))
+		return
+	}
+
+	corpoRequisicao, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		respostas.Erro(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	var publicacao modelos.Publicacao
+	if err = json.Unmarshal(corpoRequisicao, &publicacao); err != nil {
+		respostas.Erro(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err = publicacao.Preparar(); err != nil {
+		respostas.Erro(w, http.StatusBadRequest, err)
+		return
+	}
+	if err = repositorio.Atualizar(publicacaoID, publicacao); err != nil {
+		respostas.Erro(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respostas.JSON(w, http.StatusNoContent, nil)
 }
 
 //DeletarPublicacao apaga uma publicacao
